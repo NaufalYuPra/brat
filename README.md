@@ -14,7 +14,7 @@ short_description: bart
 ## HOW TO INSTALL
 
 ```bash
-git clone https://github.com/zennn08/brat-api
+git clone https://github.com/NaufalYupra/brat
 cd brat-api
 npx playwright install
 npm install
