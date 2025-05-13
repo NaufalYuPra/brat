@@ -1,0 +1,25 @@
+HTTrack3.49-2+htsswf+htsjava launched on Sun, 22 Dec 2024 16:47:21 at https://www.bratgenerator.com/ +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar
+(winhttrack -qwC2%Ps2u1%s%uN0%I0p3DaK0H0%kf2A25000%f#f -F "Mozilla/4.5 (compatible; HTTrack 3.0x; Windows 98)" -%F "<!-- Mirrored from %s%s by HTTrack Website Copier/3.x [XR&CO'2014], %s -->" -%l "en, *" https://www.bratgenerator.com/ -O1 "D:\code\CloneWeb\Brat" +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+16:48:08	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-01/times-roman-01-webfont.eot
+16:48:08	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-01/times-roman-01-webfont.woff
+16:48:08	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-01/times-roman-01-webfont.ttf
+16:48:08	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-03/arial_narrow-webfont.woff
+16:48:08	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-09/compacta_black_regular-webfont.woff2
+16:48:08	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-09/compacta_black_regular-webfont.woff
+16:48:09	Error: 	"Not Found" (404) at link https://libraries.wmgartistservices.com/owlcarousel/owl.video.play.png (from https://libraries.wmgartistservices.com/owlcarousel/owl.carousel.css)
+16:48:09	Error: 	"Not Found" (404) at link https://www.bratgenerator.com/POST (from assets.adobedtm.com/launch-EN302b8a31b75a4dda8ff8df1d0cdb4762.min.js)
+16:48:09	Error: 	"Not Found" (404) at link https://www.bratgenerator.com/Trident/ (from assets.adobedtm.com/launch-EN302b8a31b75a4dda8ff8df1d0cdb4762.min.js)
+16:48:09	Error: 	"Not Found" (404) at link https://www.bratgenerator.com/get (from assets.adobedtm.com/launch-EN302b8a31b75a4dda8ff8df1d0cdb4762.min.js)
+16:48:09	Error: 	"Not Found" (404) at link https://www.bratgenerator.com/helpers/getObjectProperty.js (from assets.adobedtm.com/launch-EN302b8a31b75a4dda8ff8df1d0cdb4762.min.js)
+16:48:09	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000012696/files/2021-09/icomoon-.eot?gnlls8
+16:48:09	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000012696/files/2021-09/icomoon-.ttf?gnlls8
+16:48:09	Warning: 	File not parsed, looks like binary: https://www.bratgenerator.com/sites/g/files/g2000012696/files/2021-09/icomoon-.woff?gnlls8
+
+HTTrack Website Copier/3.49-2 mirror complete in 48 seconds : 86 links scanned, 79 files written (3374884 bytes overall) [2337980 bytes received at 48707 bytes/sec], 1689264 bytes transferred using HTTP compression in 50 files, ratio 32%, 3.9 requests per connection
+(5 errors, 9 warnings, 0 messages)
