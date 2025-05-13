@@ -2,8 +2,6 @@ name: Sync to Hugging Face hub
 on:
   push:
     branches: [main]
-
-  # to run this workflow manfually from the Adctions tab
   workflow_dispatch:
 
 jobs:
@@ -14,7 +12,17 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-      - name: Push to hub
+
+      - name: Configure Git user
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Push to Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push -f https://NaufalYP1:$HF_TOKEN@huggingface.co/spaces/NaufalYP1/brat
+        run: |
+          # atur ulang URL remote jadi hanya domain + repo, tanpa username
+          git remote set-url origin https://huggingface.co/spaces/NaufalYP1/brat
+          # push pakai token yang sudah di-inject sebagai credential
+          git push -f https://$HF_TOKEN@huggingface.co/spaces/NaufalYP1/brat main
