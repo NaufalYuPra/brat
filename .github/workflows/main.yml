@@ -1,12 +1,15 @@
-name: Sync to Hugging Face hub
+name: Sync to Hugging Face Hub
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   sync-to-hub:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -14,16 +17,18 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Configure Git
-        run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Actions"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
 
-      - name: Push to Hugging Face Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_USERNAME: NaufalYP1                # <-- tambahkan variabel ini
-        run: |
-          git push --force \
-            https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/brat \
-            main
+      - name: Install huggingface_hub
+        run: pip install huggingface_hub
+
+      - name: Sync to Hugging Face Space
+        uses: huggingface/hub-action@main
+        with:
+          repo_id: NaufalYP1/brat    # format: <username>/<repo> sesuai URL Space
+          repo_type: space           # “space” untuk Hugging Face Space
+          token: ${{ secrets.HF_TOKEN }}
+          path: .                    # folder yang akan di-push (root of checkout)
