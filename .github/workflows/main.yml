@@ -8,21 +8,26 @@ jobs:
   sync-to-hub:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
 
-      - name: Configure Git user
+      - name: Configure Git
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Actions"
 
-      - name: Push to Hugging Face Hub
+      - name: Set Hugging Face remote with token
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # atur ulang URL remote jadi hanya domain + repo, tanpa username
-          git remote set-url origin https://huggingface.co/spaces/NaufalYP1/brat
-          # push pakai token yang sudah di-inject sebagai credential
-          git push -f https://$HF_TOKEN@huggingface.co/spaces/NaufalYP1/brat main
+          # Hapus remote hf jika sudah ada, lalu tambahkan ulang dengan token
+          git remote remove hf || true
+          git remote add hf https://${HF_TOKEN}@huggingface.co/spaces/NaufalYP1/brat
+
+      - name: Push to Hugging Face Space
+        run: |
+          # Push ke remote 'hf' (yang sudah berisi token) serta paksa update branch main
+          git push hf main --force
