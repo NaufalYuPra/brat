@@ -1,4 +1,5 @@
 name: Sync to Hugging Face hub
+
 on:
   push:
     branches: [main]
@@ -8,26 +9,24 @@ jobs:
   sync-to-hub:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
 
-      - name: Configure Git
+      - name: Configure Git user
         run: |
           git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Actions"
+          git config --global user.name  "GitHub Actions"
 
-      - name: Set Hugging Face remote with token
+      - name: Push to Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Hapus remote hf jika sudah ada, lalu tambahkan ulang dengan token
-          git remote remove hf || true
-          git remote add hf https://${HF_TOKEN}@huggingface.co/spaces/NaufalYP1/brat
-
-      - name: Push to Hugging Face Space
-        run: |
-          # Push ke remote 'hf' (yang sudah berisi token) serta paksa update branch main
-          git push hf main --force
+          # Buang remote origin lama (jika ada)
+          git remote remove origin || true
+          # Tambahkan ulang remote origin dengan token (tanpa username)
+          git remote add origin https://$HF_TOKEN@huggingface.co/spaces/NaufalYP1/brat.git
+          # Push ke branch main dengan force
+          git push -f origin main
