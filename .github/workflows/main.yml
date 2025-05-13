@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
 
-  # to run this workflow manfually from the Actions tab
+  # to run this workflow manfually from the Adctions tab
   workflow_dispatch:
 
 jobs:
@@ -17,4 +17,4 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push https://NaufalYP1:$HF_TOKEN@huggingface.co/spaces/NaufalYP1/brat main
+        run: git push https://NaufalYP1:$HF_TOKEN@huggingface.co/spaces/NaufalYP1/brat
