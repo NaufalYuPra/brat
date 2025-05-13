@@ -26,9 +26,9 @@ jobs:
         run: pip install huggingface_hub
 
       - name: Sync to Hugging Face Space
-        uses: huggingface/hub-action@main
+        uses: huggingface/hub-action@v2    # <— pakai tag rilis resmi, bukan `main`
         with:
-          repo_id: NaufalYP1/brat    # format: <username>/<repo> sesuai URL Space
-          repo_type: space           # “space” untuk Hugging Face Space
+          repo_id: NaufalYP1/brat
+          repo_type: space
           token: ${{ secrets.HF_TOKEN }}
-          path: .                    # folder yang akan di-push (root of checkout)
+          path: .
