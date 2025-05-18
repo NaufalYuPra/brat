@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import morgan from 'morgan';
-import chromium from 'chrome-aws-lambda';
-import { webkit } from 'playwright-core';
+import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs/promises';
 import { existsSync, unlinkSync } from 'fs';
@@ -30,10 +29,10 @@ app.use(morgan('dev'));
 let browser = null;
 async function launchBrowser() {
   if (browser) return browser;
-  browser = await webkit.launch({
-    args: chromium.args,
-    executablePath: await chromium.executablePath(),  // ← perbaikan: panggil sebagai fungsi
-    headless: chromium.headless,
+  // pakai Chromium dari Playwright Docker image
+  browser = await chromium.launch({ 
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'] 
   });
   return browser;
 }
