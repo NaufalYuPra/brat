@@ -1,178 +1,156 @@
 import 'dotenv/config';
 import express from 'express';
 import morgan from 'morgan';
-import { chromium } from 'playwright';
+import chromium from 'chrome-aws-lambda';
+import { webkit } from 'playwright-core';
 import path from 'path';
 import fs from 'fs/promises';
 import { existsSync, unlinkSync } from 'fs';
-import { exec } from 'child_process';
+import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
 import { fileURLToPath } from 'url';
 import { LRUCache } from 'lru-cache';
 import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const app = express();
 const PORT = process.env.PORT || 3000;
-
 const TEMP_DIR = path.join(__dirname, 'temp');
+
 await fs.mkdir(TEMP_DIR, { recursive: true });
 
-const imageCache = new LRUCache({ max: 100, ttl: 1000 * 60 * 60 }); // 1 jam
-const videoCache = new LRUCache({ max: 50, ttl: 1000 * 60 * 60 });  // 1 jam
+const imageCache = new LRUCache({ max: 100, ttl: 1000 * 60 * 60 });
+const videoCache = new LRUCache({ max: 50, ttl: 1000 * 60 * 60 });
 
-const hashText = (text) => crypto.createHash('sha256').update(text).digest('hex');
+const ffmpeg = createFFmpeg({ log: true });
 
+const hashText = text => crypto.createHash('sha256').update(text).digest('hex');
+
+const app = express();
 app.use(morgan('dev'));
 
-let browser;
-const launchBrowser = async () => {
-  if (!browser) browser = await chromium.launch();
-};
-await launchBrowser();
+let browser = null;
+async function launchBrowser() {
+  if (browser) return browser;
+  browser = await webkit.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath,
+    headless: chromium.headless,
+  });
+  return browser;
+}
 
 async function fetchImage(text, outputPath) {
-  await launchBrowser();
+  const browser = await launchBrowser();
   const context = await browser.newContext({ viewport: { width: 1536, height: 695 } });
   const page = await context.newPage();
-  const filePath = path.join(__dirname, './site/index.html');
+  const filePath = path.join(__dirname, 'site/index.html');
 
   await page.goto(`file://${filePath}`);
   await page.click('#toggleButtonWhite');
   await page.click('#textOverlay');
-  await page.click('#textInput');
   await page.fill('#textInput', text);
 
   const element = await page.$('#textOverlay');
   const box = await element.boundingBox();
-
   await page.screenshot({
-    clip: {
-      x: box.x,
-      y: box.y,
-      width: 500,
-      height: 500
-    },
+    clip: { x: box.x, y: box.y, width: 500, height: 500 },
     path: outputPath
   });
 
   await context.close();
 }
 
+async function processVideo(frames, outputPath) {
+  if (!ffmpeg.isLoaded()) await ffmpeg.load();
+  // tulis setiap frame ke virtual FS
+  frames.forEach((buffer, i) => {
+    ffmpeg.FS('writeFile', `frame_${i}.png`, buffer);
+  });
+  // buat file list untuk concat
+  const listTxt = frames.map((_, i) => `file 'frame_${i}.png'\nduration 0.7`).join('\n') +
+                  `\nfile 'frame_${frames.length - 1}.png'\nduration 2`;
+  ffmpeg.FS('writeFile', 'list.txt', listTxt);
+
+  await ffmpeg.run(
+    '-f', 'concat', '-safe', '0', '-i', 'list.txt',
+    '-vf', 'fps=30,scale=512:512',
+    '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p',
+    'out.mp4'
+  );
+
+  const data = ffmpeg.FS('readFile', 'out.mp4');
+  await fs.writeFile(outputPath, data);
+}
+
 app.get('/', async (req, res) => {
   const text = req.query.text;
   const isVideo = req.query.video === 'true';
-
-  if (!text) { 
-    const json = await (await fetch('http://ip-api.com/json')).json()
-    return res.json({
-            status: true,
-            msg: 'Parameter text diperlukan',
-            data: json
-    });
+  if (!text) {
+    return res.status(400).json({ error: 'Parameter "text" diperlukan' });
   }
 
   const key = hashText(text);
 
   if (!isVideo) {
-    const cachedPath = imageCache.get(key);
-    if (cachedPath) {
-      console.log(`[CACHE] - Mengirim gambar`);
-      return res.sendFile(cachedPath);
-    }
+    const cached = imageCache.get(key);
+    if (cached) return res.sendFile(cached);
 
+    const imgPath = path.join(TEMP_DIR, `${key}.png`);
     try {
-      const imagePath = path.join(TEMP_DIR, `${key}.png`);
-      if (existsSync(imagePath)) {
-        imageCache.set(key, imagePath);
-        console.log(`[FS] - Mengirim gambar`);
-        return res.sendFile(imagePath);
+      if (!existsSync(imgPath)) {
+        await fetchImage(text, imgPath);
       }
-
-      await fetchImage(text, imagePath);
-      imageCache.set(key, imagePath);
-      res.setHeader('Content-Type', 'image/png');
-      console.log(`[GENERATE] - Mengirim gambar`);
-      return res.sendFile(imagePath);
+      imageCache.set(key, imgPath);
+      res.type('png').sendFile(imgPath);
     } catch (err) {
-      return res.status(500).json({ error: 'Gagal menghasilkan gambar', details: err.message });
+      console.error('[ERROR][Image]', err);
+      res.status(500).json({ error: 'Gagal menghasilkan gambar', detail: err.message });
     }
+    return;
   }
 
-  const cachedVideo = videoCache.get(key);
-  if (cachedVideo) {
-    console.log(`[CACHE] - Mengirim video`);
-    return res.sendFile(cachedVideo);
-  }
-  
+  // Video flow
+  const cachedVid = videoCache.get(key);
+  if (cachedVid) return res.sendFile(cachedVid);
+
   const words = text.split(' ').slice(0, 40);
-  const framePaths = [];
-  
+  const frameBuffers = [];
+
   try {
+    const browser = await launchBrowser();
     const context = await browser.newContext({ viewport: { width: 1536, height: 695 } });
     const page = await context.newPage();
-    const filePath = path.join(__dirname, './site/index.html');
-    
+    const filePath = path.join(__dirname, 'site/index.html');
     await page.goto(`file://${filePath}`);
     await page.click('#toggleButtonWhite');
     await page.click('#textOverlay');
     await page.click('#textInput');
 
     for (let i = 0; i < words.length; i++) {
-      const currentText = words.slice(0, i + 1).join(' ');
-      const framePath = path.join(TEMP_DIR, `${key}_${i}.png`);
-      await page.fill('#textInput', currentText);
-      const element = await page.$('#textOverlay');
-      const box = await element.boundingBox();
-      await page.screenshot({
-        clip: {
-          x: box.x,
-          y: box.y,
-          width: 500,
-          height: 500
-        },
-        path: framePath
+      const current = words.slice(0, i + 1).join(' ');
+      await page.fill('#textInput', current);
+      const el = await page.$('#textOverlay');
+      const box = await el.boundingBox();
+      const buf = await page.screenshot({
+        clip: { x: box.x, y: box.y, width: 500, height: 500 }
       });
-      framePaths.push(framePath);
+      frameBuffers.push(buf);
     }
 
     await context.close();
 
-    const listName = `filelist_${Date.now()}.txt`;
-    const fileListPath = path.join(TEMP_DIR, listName);
-    const listData = framePaths.map(p => `file '${p}'\nduration 0.7`).join('\n') +
-                     `\nfile '${framePaths.at(-1)}'\nduration 2`;
+    const vidPath = path.join(TEMP_DIR, `${key}.mp4`);
+    await processVideo(frameBuffers, vidPath);
+    videoCache.set(key, vidPath);
 
-    await fs.writeFile(fileListPath, listData);
-
-    const videoOutputPath = path.join(TEMP_DIR, `${key}.mp4`);
-    const ffmpegCmd = `ffmpeg -y -f concat -safe 0 -i "${fileListPath}" -vf "fps=30,scale=512:512" -c:v libx264 -preset ultrafast -pix_fmt yuv420p "${videoOutputPath}"`;
-
-    exec(ffmpegCmd, async (err) => {
-      await fs.unlink(fileListPath).catch(() => {});
-      framePaths.forEach(fp => existsSync(fp) && unlinkSync(fp));
-
-      if (err) {
-        console.error('FFmpeg error:', err);
-        return res.status(500).json({ error: 'Gagal membuat video' });
-      }
-
-      videoCache.set(key, videoOutputPath);
-      res.setHeader('Content-Type', 'video/mp4');
-      console.log(`[GENERATE] - Mengirim video`);
-      res.sendFile(videoOutputPath);
-    });
-
+    res.type('mp4').sendFile(vidPath);
   } catch (err) {
-    framePaths.forEach(fp => existsSync(fp) && unlinkSync(fp));
-    res.status(500).json({ error: 'Gagal memproses video', details: err.message });
+    console.error('[ERROR][Video]', err);
+    res.status(500).json({ error: 'Gagal memproses video', detail: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server ready on port ${PORT}`));
 
 process.on('SIGINT', async () => {
   if (browser) await browser.close();
