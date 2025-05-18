@@ -22,7 +22,6 @@ const imageCache = new LRUCache({ max: 100, ttl: 1000 * 60 * 60 });
 const videoCache = new LRUCache({ max: 50, ttl: 1000 * 60 * 60 });
 
 const ffmpeg = createFFmpeg({ log: true });
-
 const hashText = text => crypto.createHash('sha256').update(text).digest('hex');
 
 const app = express();
@@ -33,7 +32,7 @@ async function launchBrowser() {
   if (browser) return browser;
   browser = await webkit.launch({
     args: chromium.args,
-    executablePath: await chromium.executablePath,
+    executablePath: await chromium.executablePath(),  // ← perbaikan: panggil sebagai fungsi
     headless: chromium.headless,
   });
   return browser;
@@ -62,11 +61,9 @@ async function fetchImage(text, outputPath) {
 
 async function processVideo(frames, outputPath) {
   if (!ffmpeg.isLoaded()) await ffmpeg.load();
-  // tulis setiap frame ke virtual FS
   frames.forEach((buffer, i) => {
     ffmpeg.FS('writeFile', `frame_${i}.png`, buffer);
   });
-  // buat file list untuk concat
   const listTxt = frames.map((_, i) => `file 'frame_${i}.png'\nduration 0.7`).join('\n') +
                   `\nfile 'frame_${frames.length - 1}.png'\nduration 2`;
   ffmpeg.FS('writeFile', 'list.txt', listTxt);
@@ -109,7 +106,6 @@ app.get('/', async (req, res) => {
     return;
   }
 
-  // Video flow
   const cachedVid = videoCache.get(key);
   if (cachedVid) return res.sendFile(cachedVid);
 
