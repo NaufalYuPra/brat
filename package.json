@@ -4,8 +4,7 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "postinstall": "npx playwright install --with-deps"
+    "start": "node app.js"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.11.6",
