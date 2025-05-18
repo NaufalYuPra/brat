@@ -1,12 +1,11 @@
 {
-  "version": 3,
-  "functions": {
-    "app.js": {
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
+  "version": 2,
+  "builds": [
+    { "src": "app.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/app.js" }
+  ],
   "env": {
     "NODE_ENV": "production"
   }
