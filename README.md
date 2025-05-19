@@ -26,3 +26,8 @@ node app.js
 ```
 http://localhost:3000/?text=Hi!
 ```
+
+## GITHUB_REPO
+```
+https://github.com/NaufalYupra/brat
+```
